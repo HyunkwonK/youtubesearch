@@ -5,12 +5,15 @@ import time
 import sys
 import isodate
 
-API_KEY = "AIzaSyCEUe9hgOTUw5ScPQqaxY5TpbUswA0yUfk"  # ◀◀◀ 여어지어주세요
+
+
 SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 VIDEO_URL = "https://www.googleapis.com/youtube/v3/videos"
 CHANNEL_URL = "https://www.googleapis.com/youtube/v3/channels"
+CONFIG_FILE = "config.json"
 
-def get_video_ids(query: str, max_results: int = 100):
+
+def get_video_ids(query: str, API_KEY: str, max_results: int = 100):
     video_ids = []
     next_page_token = None
 
@@ -35,7 +38,7 @@ def get_video_ids(query: str, max_results: int = 100):
 
     return video_ids[:max_results]
 
-def get_video_info(video_ids):
+def get_video_info(video_ids, API_KEY: str):
     results = []
     for i in range(0, len(video_ids), 50):
         ids_chunk = video_ids[i:i+50]
@@ -70,12 +73,12 @@ def get_video_info(video_ids):
         time.sleep(1)
     return results
 
-def get_subscriber_counts(channel_ids):
+def get_subscriber_counts(channel_ids, api_key: str):
     subs_map = {}
     for i in range(0, len(channel_ids), 50):
         ids_chunk = channel_ids[i:i+50]
         params = {
-            "key": API_KEY,
+            "key": api_key,
             "part": "statistics",
             "id": ",".join(ids_chunk),
         }
@@ -139,20 +142,19 @@ def convert_duration(duration):
     except:
         return "-"
 
-def main(query: str, max_results: int = 100, return_df: bool = False):  # ← ✅ 여기에 return_df 추가
-
+def main(query: str, max_results: int = 100, api_key: str = "", return_df: bool = False):
     print(f"\n[INFO] \"{query}\" 검색 시작...")
-    video_ids = get_video_ids(query, max_results=max_results)
+    video_ids = get_video_ids(query, api_key, max_results=max_results)
     print(f"[INFO] 영상 ID {len(video_ids)}개 수집")
 
-    video_info = get_video_info(video_ids)
+    video_info = get_video_info(video_ids, api_key)
     channel_ids = list({v["channel_id"] for v in video_info})
     print(f"[INFO] 채널 ID {len(channel_ids)}개 수집")
     if not channel_ids:
         print("[ERROR] 조건에 맞는 채널이 없습니다. 필터 조건을 완화해 보세요.")
         sys.exit(1)
 
-    subs_map = get_subscriber_counts(channel_ids)
+    subs_map = get_subscriber_counts(channel_ids, api_key)
 
     filtered_info = []
     for video in video_info:
@@ -188,8 +190,8 @@ def main(query: str, max_results: int = 100, return_df: bool = False):  # ← �
         "reaction_level": "반응 해석",
         "duration": "영상 길이",
         "url": "영상 링크"
-    }).to_csv(f"{query}_reaction_top100.csv", index=False, encoding="utf-8-sig")
-    print(f"[DONE] \"{query}_reaction_top100.csv\" 파일 저장 완료")
+    }).to_csv(f"{query}_reaction_top.csv", index=False, encoding="utf-8-sig")
+    print(f"[DONE] \"{query}_reaction_top.csv\" 파일 저장 완료")
     # if return_df:
     #     return df_sorted
     if return_df:
