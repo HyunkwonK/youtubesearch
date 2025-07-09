@@ -175,14 +175,16 @@ def main(query: str, max_results: int = 100, api_key: str = "", return_df: bool 
         print("[ERROR] 조건에 맞는 영상이 없습니다 (ex. 구독자 100명 이상).")
         sys.exit(1)
 
+    # df = pd.DataFrame(filtered_info)
     df = pd.DataFrame(filtered_info)
+    df["video_id"] = [v["video_id"] for v in filtered_info]
+
     df_sorted = df.sort_values(by="reaction_score", ascending=False).head(100)
-    df_sorted.drop(columns=["channel_id", "video_id", "view_count","subscriber_count"], inplace=True)
+    df_sorted.drop(columns=["channel_id", "view_count","subscriber_count"], inplace=True)
     df_sorted.rename(columns={
         "title": "제목",
         "channel_title": "채널명",
         "published_at": "업로드 날짜",
-        # "view_count" : "조회수",
         "view_count_formatted": "조회수",
         "view_simple": "조회수 한글표현",
         "subscriber_count_simple": "구독자수",
@@ -192,10 +194,15 @@ def main(query: str, max_results: int = 100, api_key: str = "", return_df: bool 
         "url": "영상 링크"
     }).to_csv(f"{query}_reaction_top.csv", index=False, encoding="utf-8-sig")
     print(f"[DONE] \"{query}_reaction_top.csv\" 파일 저장 완료")
-    # if return_df:
-    #     return df_sorted
+
     if return_df:
-        return df_sorted.reset_index(drop=True), filtered_info  # ← video_id 등 원본도 함께 반환
+        # ✅ df_sorted 순서에 맞춰 filtered_info도 재정렬
+        sorted_video_ids = list(df_sorted["video_id"])
+        video_info_map = {v["video_id"]: v for v in filtered_info}
+        sorted_raw_info = [video_info_map[vid] for vid in sorted_video_ids if vid in video_info_map]
+
+        return df_sorted.reset_index(drop=True), sorted_raw_info
+
 
 if __name__ == "__main__":
     main("쿠파스")  # ◀ 원하는 검색어로 변경
