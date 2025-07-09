@@ -68,31 +68,6 @@ class YouTubeSearchApp:
         self.df = pd.DataFrame()
         self.eng_columns = []
 
-    # def run_search(self):
-    #     query = self.query_entry.get().strip()
-    #     try:
-    #         max_results = int(self.count_entry.get().strip())
-    #     except ValueError:
-    #         max_results = 30
-
-    #     df, raw_data = search_main_function(query, max_results, return_df=True)
-    #     self.df = df
-    #     self.df_raw = raw_data  # ✅ 원본 저장 (video_id 포함)
-    #     self.eng_columns = list(self.df.columns)
-
-    #     # 한글 컬럼명으로 변환
-    #     display_columns = [COLUMN_TRANSLATION.get(col, col) for col in self.eng_columns]
-
-    #     self.tree.delete(*self.tree.get_children())
-    #     self.tree["columns"] = display_columns
-    #     self.tree["show"] = "headings"
-
-    #     for col in display_columns:
-    #         self.tree.heading(col, text=col)
-    #         self.tree.column(col, anchor="center", width=140)
-
-    #     for _, row in self.df.iterrows():
-    #         self.tree.insert("", "end", values=list(row))
     def run_search(self):
         query = self.query_entry.get().strip()
         try:
