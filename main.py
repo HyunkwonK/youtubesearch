@@ -23,6 +23,7 @@ def save_api_key_to_file(api_key):
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump({"api_key": api_key}, f, ensure_ascii=False, indent=2)
 
+
 # 영어 → 한글 매핑
 COLUMN_TRANSLATION = {
     "title": "제목",
@@ -54,7 +55,12 @@ class YouTubeSearchApp:
         self.root = root
         root.title("유튜브 반응도 검색기")
         root.geometry("1300x600")
-         
+        root.resizable(True, True)
+
+        # 전체 영역 확장되도록 설정
+        root.grid_rowconfigure(1, weight=1)
+        root.grid_columnconfigure(0, weight=3)   # 테이블 쪽 비중
+        root.grid_columnconfigure(1, weight=2)   # 썸네일 쪽 비중
         # 검색창
         self.top_frame = tk.Frame(root)
         self.top_frame.grid(row=0, column=0, columnspan=2, sticky="ew", padx=10, pady=5)
@@ -78,12 +84,45 @@ class YouTubeSearchApp:
 
         tk.Button(self.top_frame, text="검색", command=self.run_search).grid(row=1, column=4, padx=10)
 
-        # 테이블
-        self.table_frame = tk.Frame(root)
-        self.table_frame.grid(row=1, column=0, sticky="nsew")
-        root.grid_rowconfigure(1, weight=1)
-        root.grid_columnconfigure(0, weight=3)
+        # # 테이블
+        # self.table_frame = tk.Frame(root)
+        # self.table_frame.grid(row=1, column=0, sticky="nsew")
+        # root.grid_rowconfigure(1, weight=1)
+        # root.grid_columnconfigure(0, weight=3)
 
+        # self.tree_scroll_y = tk.Scrollbar(self.table_frame)
+        # self.tree_scroll_y.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # self.tree = ttk.Treeview(self.table_frame, yscrollcommand=self.tree_scroll_y.set)
+        # self.tree.pack(fill=tk.BOTH, expand=True)
+        # self.tree_scroll_y.config(command=self.tree.yview)
+        # self.tree.bind("<ButtonRelease-1>", self.on_tree_select)
+        # self.tree.bind("<Control-c>", self.copy_selected_cell)
+
+        # # 썸네일
+        # self.thumb_frame = tk.Frame(root, width=650, height=350)  # ✅ 가로 공간 확보
+        # self.thumb_frame.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
+        
+        # root.grid_columnconfigure(1, weight=1)
+        
+        # self.thumb_frame.bind("<Configure>", self.on_thumb_resize)
+        
+        # self.thumb_label = tk.Label(self.thumb_frame, text="썸네일 미리보기", anchor="center")
+        # self.thumb_label.place(relx=0.5, rely=0.5, anchor="center")  # 중앙 정렬
+        # self.thumb_label.pack(fill=tk.BOTH, expand=True)  
+        # root.geometry("1400x700")  # ✅ 넓이 늘림
+        # self.thumbnail_img = None
+        # self.df = pd.DataFrame()
+        # self.eng_columns = []
+         # ✅ PanedWindow 생성 (수평 분할)
+        self.paned = tk.PanedWindow(root, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
+        self.paned.grid(row=1, column=0, columnspan=2, sticky="nsew")
+        
+        root.grid_rowconfigure(1, weight=1)
+        root.grid_columnconfigure(0, weight=1)
+
+        # ✅ 테이블 프레임
+        self.table_frame = tk.Frame(self.paned)
         self.tree_scroll_y = tk.Scrollbar(self.table_frame)
         self.tree_scroll_y.pack(side=tk.RIGHT, fill=tk.Y)
 
@@ -93,18 +132,19 @@ class YouTubeSearchApp:
         self.tree.bind("<ButtonRelease-1>", self.on_tree_select)
         self.tree.bind("<Control-c>", self.copy_selected_cell)
 
-        # 썸네일
-        self.thumb_frame = tk.Frame(root, width=650, height=350)  # ✅ 가로 공간 확보
-        self.thumb_frame.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
-        self.thumb_frame.grid_propagate(False)  # ✅ 위젯 크기에 영향 안 받게 고정
-        root.grid_columnconfigure(1, weight=1)
+        self.paned.add(self.table_frame, minsize=400)  # 왼쪽 영역 추가
 
-        self.thumb_label = tk.Label(self.thumb_frame, text="썸네일 미리보기")
-        self.thumb_label.pack(fill=tk.BOTH, expand=True)  
-        root.geometry("1400x700")  # ✅ 넓이 늘림
-        self.thumbnail_img = None
-        self.df = pd.DataFrame()
-        self.eng_columns = []
+        # ✅ 썸네일 프레임
+        self.thumb_frame = tk.Frame(self.paned)
+        self.thumb_frame.bind("<Configure>", self.on_thumb_resize)
+
+        self.thumb_label = tk.Label(self.thumb_frame, text="썸네일 미리보기", anchor="center")
+        self.thumb_label.pack(fill=tk.BOTH, expand=True)
+
+        self.paned.add(self.thumb_frame, minsize=300)  # 오른쪽 영역 추가
+                # ✅ 초기 분할 위치 설정 (8:2 비율)
+        self.root.update_idletasks()  # geometry가 잡힌 이후에 sash 위치 조정
+        self.paned.sash_place(0, int(self.root.winfo_width() * 0.8), 0)
 
     def save_api_key(self):
         api_key = self.api_entry.get().strip()
@@ -150,7 +190,10 @@ class YouTubeSearchApp:
         for _, row in df_display.iterrows():
             self.tree.insert("", "end", values=list(row))
 
-
+    def on_thumb_resize(self, event):
+        if hasattr(self, "current_video_id") and self.current_video_id:
+            self.update_thumbnail(self.current_video_id)
+            
     def copy_selected_cell(self, event):
         try:
             selected = self.tree.selection()[0]
@@ -164,6 +207,69 @@ class YouTubeSearchApp:
         except Exception as e:
             print("[복사 실패]", e)
 
+    def update_thumbnail(self, video_id):
+        url = f"https://img.youtube.com/vi/{video_id}/mqdefault.jpg"
+        try:
+            response = requests.get(url, timeout=5)
+            response.raise_for_status()
+            img_data = Image.open(BytesIO(response.content))
+
+            # 현재 프레임 크기 측정
+            frame_width = self.thumb_frame.winfo_width()
+            frame_height = self.thumb_frame.winfo_height()
+
+            if frame_width <= 1 or frame_height <= 1:
+                frame_width, frame_height = 600, 338  # 초기값
+
+            # 비율 유지하며 프레임 내에 맞추기
+            img_data.thumbnail((frame_width, frame_height), Image.LANCZOS)
+
+            self.thumbnail_img = ImageTk.PhotoImage(img_data)
+            self.thumb_label.configure(image=self.thumbnail_img, text="")
+            self.thumb_label.image = self.thumbnail_img
+
+        except Exception as e:
+            self.thumb_label.config(text=f"[썸네일 로딩 실패] {e}", image="")
+    # def on_tree_select(self, event):
+        
+    #     item_id = self.tree.focus()
+    #     if not item_id:
+    #         return
+
+    #     index = self.tree.index(item_id)
+    #     if index >= len(self.df_raw):
+    #         return
+
+    #     try:
+    #         video_id = self.df_raw[index].get("video_id", "")
+    #         # video_id = self.df.iloc[index]["video_id"]
+    #         print("video_id:", video_id)
+    #         if not video_id:
+    #             raise ValueError("video_id 없음")
+    #     except Exception as e:
+    #         self.thumb_label.config(text=f"[오류] video_id 추출 실패: {e}", image="")
+    #         return
+
+    #     # 썸네일 표시
+    #     # 썸네일 표시
+    #     url = f"https://img.youtube.com/vi/{video_id}/mqdefault.jpg"
+    #     try:
+    #         response = requests.get(url, timeout=5)
+    #         response.raise_for_status()
+    #         img_data = Image.open(BytesIO(response.content))
+            
+    #         # ✅ 비율 유지하며 썸네일 크기 조정
+    #         img_data.thumbnail((600, 338), Image.LANCZOS)
+    #         self.thumbnail_img = ImageTk.PhotoImage(img_data)
+    #         self.thumb_label.configure(image=self.thumbnail_img, text="", width=600, height=338)
+
+
+    #         self.thumbnail_img = ImageTk.PhotoImage(img_data)
+    #         self.thumb_label.configure(image=self.thumbnail_img, text="")
+    #         self.thumb_label.image = self.thumbnail_img
+    #     except Exception as e:
+    #         self.thumb_label.config(text=f"[썸네일 로딩 실패] {e}", image="")
+
     def on_tree_select(self, event):
         item_id = self.tree.focus()
         if not item_id:
@@ -175,30 +281,14 @@ class YouTubeSearchApp:
 
         try:
             video_id = self.df_raw[index].get("video_id", "")
-            # video_id = self.df.iloc[index]["video_id"]
-            print("video_id:", video_id)
+            self.current_video_id = video_id  # 현재 영상 기억해두기
             if not video_id:
                 raise ValueError("video_id 없음")
         except Exception as e:
             self.thumb_label.config(text=f"[오류] video_id 추출 실패: {e}", image="")
             return
 
-        # 썸네일 표시
-        # 썸네일 표시
-        url = f"https://img.youtube.com/vi/{video_id}/mqdefault.jpg"
-        try:
-            response = requests.get(url, timeout=5)
-            response.raise_for_status()
-            img_data = Image.open(BytesIO(response.content))
-            
-            # ✅ 비율 유지하며 썸네일 크기 조정
-            img_data.thumbnail((600, 338), Image.LANCZOS)
-
-            self.thumbnail_img = ImageTk.PhotoImage(img_data)
-            self.thumb_label.configure(image=self.thumbnail_img, text="")
-            self.thumb_label.image = self.thumbnail_img
-        except Exception as e:
-            self.thumb_label.config(text=f"[썸네일 로딩 실패] {e}", image="")
+        self.update_thumbnail(video_id)
 
 
 
