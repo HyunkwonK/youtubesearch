@@ -144,7 +144,7 @@ class YouTubeSearchApp:
         self.paned.add(self.thumb_frame, minsize=300)  # 오른쪽 영역 추가
                 # ✅ 초기 분할 위치 설정 (8:2 비율)
         self.root.update_idletasks()  # geometry가 잡힌 이후에 sash 위치 조정
-        self.paned.sash_place(0, int(self.root.winfo_width() * 0.8), 0)
+        self.root.after(100, lambda: self.paned.sash_place(0, int(self.root.winfo_width() * 0.8), 0))
 
     def save_api_key(self):
         api_key = self.api_entry.get().strip()
